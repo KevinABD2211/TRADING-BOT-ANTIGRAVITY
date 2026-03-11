@@ -31,9 +31,10 @@ aiohttp==3.10.10
 openai==1.51.2
 anthropic==0.36.0
 
-# ── Broker SDKs ───────────────────────────────────────────────
+# ── Broker SDKs & Market Data ─────────────────────────────────
 python-binance
 alpaca-trade-api
+yfinance
 
 # ── Notifications ─────────────────────────────────────────────
 python-telegram-bot==21.6
