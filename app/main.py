@@ -8,8 +8,10 @@ from sqlalchemy import desc
 from app.database import get_db_context, init_db
 from app.models import ParsedSignal, RawDiscordMessage, TradeExecution, Position
 from app.services.execution_manager import ExecutionManager
+from app.services.scanner import start_scanner_loop
 from pydantic import BaseModel
 import os
+import asyncio
 
 execution_manager = ExecutionManager()
 
@@ -20,6 +22,10 @@ class SignalActionRequest(BaseModel):
 async def lifespan(app: FastAPI):
     # Startup
     await init_db()
+    
+    # Start the background autonomous commodity scanner
+    asyncio.create_task(start_scanner_loop())
+    
     yield
     # Shutdown
 

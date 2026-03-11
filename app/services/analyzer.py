@@ -121,3 +121,88 @@ class AnalyzerService:
         except Exception as e:
             logger.error(f"OpenAI Analyzer Failed: {e}")
             return fallback_response
+
+    async def generate_autonomous_advice(self, symbol: str, asset_type: str) -> Optional[Dict[str, Any]]:
+        """
+        No external signal provided. Purely analyze market data and generate a 
+        strong LONG or SHORT advice with strict execution parameters.
+        """
+        # 1. Fetch Market Context via yfinance
+        ctx = await self.market_data_service.get_market_context(
+            symbol, 
+            asset_type=asset_type
+        )
+        
+        if not self.client or "error" in ctx:
+            logger.warning(f"Cannot generate advice for {symbol}. Missing API key or Market Data.")
+            return None
+
+        # 2. Build the LLM Prompt
+        market_str = json.dumps(ctx, indent=2)
+
+        system_msg = """
+        You are an expert quantitative trading analyst for an institutional hedge fund.
+        You are scanning the market autonomously based purely on live Yahoo Finance data points.
+        Your job is to generate exactly ONE definitive advice (LONG or SHORT) for the asset. Do NOT stay neutral.
+        
+        # INSTRUCTIONS:
+        1. Review the momentum and current price.
+        2. Pick a "direction" (must be "long" or "short").
+        3. Provide realistic targets for `entry_price` (usually near current price), `take_profit`, and `stop_loss`.
+        4. Calculate a `confidence_score` (0-100) on your strict call.
+        5. Write a concise `reasoning` paragraph (2-3 sentences max) explaining the trigger.
+        6. Provide a `trade_timeline`.
+        
+        # REQUIRED JSON OUTPUT FORMAT:
+        {
+            "direction": "long",
+            "entry_price": 2045.50,
+            "take_profit": 2100.00,
+            "stop_loss": 2000.00,
+            "confidence_score": 88,
+            "reasoning": "Strong gold momentum over the last 5 days...",
+            "trade_timeline": "Swing (1-3 Days)"
+        }
+        Return ONLY valid JSON.
+        """
+
+        user_msg = f"""
+        MARKET CONTEXT (YFINANCE):
+        {market_str}
+        
+        ASSET:
+        {symbol} ({asset_type})
+        """
+
+        # 3. Call OpenAI
+        try:
+            logger.info(f"Generating Autonomous Advice for {symbol}...")
+            completion = await self.client.chat.completions.create(
+                model=self.settings.llm.model_name,
+                messages=[
+                    {"role": "system", "content": system_msg},
+                    {"role": "user", "content": user_msg}
+                ],
+                response_format={"type": "json_object"},
+                temperature=0.3,
+                max_tokens=300
+            )
+
+            response_content = completion.choices[0].message.content
+            ai_data = json.loads(response_content)
+            
+            logger.info(f"Autonomous Advice Generated for {symbol}: {ai_data.get('direction').upper()} (Conf={ai_data.get('confidence_score')})")
+            
+            return {
+                "direction": ai_data.get("direction", "long").lower(),
+                "entry_price": float(ai_data.get("entry_price", ctx.get("current_price"))),
+                "take_profit": float(ai_data.get("take_profit", None)),
+                "stop_loss": float(ai_data.get("stop_loss", None)),
+                "confidence_score": ai_data.get("confidence_score", 50),
+                "reasoning": ai_data.get("reasoning", "Autonomous scan completed."),
+                "trade_timeline": ai_data.get("trade_timeline", "Unknown Timeline")
+            }
+
+        except Exception as e:
+            logger.error(f"OpenAI Autonomous Generation Failed: {e}")
+            return None
