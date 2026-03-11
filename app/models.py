@@ -311,6 +311,7 @@ class ParsedSignal(Base):
     # --- LLM Metadata ---
     llm_model_used: Mapped[Optional[str]] = mapped_column(String(64))
     llm_confidence: Mapped[Optional[float]] = mapped_column(Numeric(4, 3))
+    regex_confidence: Mapped[Optional[float]] = mapped_column(Numeric(4, 3))
     llm_raw_output: Mapped[Optional[dict]] = mapped_column(JSON)
 
     raw_text: Mapped[str] = mapped_column(Text, nullable=False)
