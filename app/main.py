@@ -12,6 +12,9 @@ from app.services.scanner import start_scanner_loop
 from pydantic import BaseModel
 import os
 import asyncio
+import logging
+
+logger = logging.getLogger(__name__)
 
 execution_manager = ExecutionManager()
 
@@ -23,8 +26,11 @@ async def lifespan(app: FastAPI):
     # Startup
     await init_db()
     
-    # Start the background autonomous commodity scanner
-    asyncio.create_task(start_scanner_loop())
+    # Start the background autonomous commodity scanner ONLY if not on Vercel
+    if not os.environ.get("VERCEL"):
+        asyncio.create_task(start_scanner_loop())
+    else:
+        logger.info("Running in Vercel environment. Background scanner disabled. Delegating to Cron.")
     
     yield
     # Shutdown

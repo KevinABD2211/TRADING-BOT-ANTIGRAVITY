@@ -81,10 +81,16 @@ class DatabaseSettings(BaseSettings):
 
     @property
     def async_url(self) -> str:
+        import os
+        if os.environ.get("VERCEL"):
+            return f"sqlite+aiosqlite:////tmp/{self.name}.db"
         return f"sqlite+aiosqlite:///./{self.name}.db"
 
     @property
     def sync_url(self) -> str:
+        import os
+        if os.environ.get("VERCEL"):
+            return f"sqlite:////tmp/{self.name}.db"
         return f"sqlite:///./{self.name}.db"
 
 
