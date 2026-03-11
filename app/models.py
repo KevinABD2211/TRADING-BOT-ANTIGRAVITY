@@ -289,6 +289,10 @@ class ParsedSignal(Base):
     risk_reward_ratio: Mapped[Optional[float]] = mapped_column(Numeric(8, 4))
     signal_completeness_pct: Mapped[Optional[int]] = mapped_column(SmallInteger)
 
+    # --- AI Analysis ---
+    analysis_reasoning: Mapped[Optional[str]] = mapped_column(Text)
+    trade_timeline: Mapped[Optional[str]] = mapped_column(String(64))
+
     # --- Deduplication Flags ---
     is_duplicate: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
     duplicate_of_id: Mapped[Optional[uuid.UUID]] = mapped_column(
@@ -376,3 +380,75 @@ class ParsedSignal(Base):
         total_weight = sum(w for _, (_, w) in fields.items())
         earned = sum(w for _, (present, w) in fields.items() if present)
         return round((earned / total_weight) * 100)
+
+
+# ---------------------------------------------------------------------------
+# Model: TradeExecution
+# ---------------------------------------------------------------------------
+
+class TradeExecution(Base):
+    """
+    Records an attempted or actual order placed to a broker based on a signal,
+    or manually approved by the user.
+    """
+
+    __tablename__ = "trade_executions"
+
+    id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), primary_key=True, default=uuid.uuid4
+    )
+    signal_id: Mapped[Optional[uuid.UUID]] = mapped_column(
+        UUID(as_uuid=True),
+        ForeignKey("parsed_signals.id", ondelete="SET NULL"),
+        index=True,
+    )
+    
+    # Alpaca order reference
+    broker_order_id: Mapped[Optional[str]] = mapped_column(String(64), index=True)
+    broker: Mapped[BrokerEnum] = mapped_column(Enum(BrokerEnum, name="broker"), default=BrokerEnum.paper_alpaca)
+    
+    status: Mapped[OrderStatusEnum] = mapped_column(Enum(OrderStatusEnum, name="order_status"), default=OrderStatusEnum.pending)
+    side: Mapped[OrderSideEnum] = mapped_column(Enum(OrderSideEnum, name="order_side"))
+    symbol: Mapped[str] = mapped_column(String(32), index=True)
+    
+    # Execution Details
+    quantity: Mapped[Optional[float]] = mapped_column(Numeric(24, 8))
+    filled_quantity: Mapped[float] = mapped_column(Numeric(24, 8), default=0.0)
+    average_fill_price: Mapped[Optional[float]] = mapped_column(Numeric(24, 8))
+    notional_value: Mapped[Optional[float]] = mapped_column(Numeric(24, 8))
+    
+    # Timing
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=func.now())
+    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=func.now(), onupdate=func.now())
+    
+    # Relationships
+    signal: Mapped[Optional["ParsedSignal"]] = relationship("ParsedSignal", lazy="select")
+
+
+# ---------------------------------------------------------------------------
+# Model: Position
+# ---------------------------------------------------------------------------
+
+class Position(Base):
+    """
+    Tracks the active or closed position of a traded asset.
+    """
+
+    __tablename__ = "positions"
+
+    id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), primary_key=True, default=uuid.uuid4
+    )
+    symbol: Mapped[str] = mapped_column(String(32), index=True)
+    broker: Mapped[BrokerEnum] = mapped_column(Enum(BrokerEnum, name="broker_enum_pos"), default=BrokerEnum.paper_alpaca)
+    
+    quantity: Mapped[float] = mapped_column(Numeric(24, 8), default=0.0)
+    average_entry_price: Mapped[float] = mapped_column(Numeric(24, 8), default=0.0)
+    current_price: Mapped[Optional[float]] = mapped_column(Numeric(24, 8))
+    
+    is_open: Mapped[bool] = mapped_column(Boolean, default=True, index=True)
+    unrealized_pl: Mapped[Optional[float]] = mapped_column(Numeric(24, 8))
+    realized_pl: Mapped[float] = mapped_column(Numeric(24, 8), default=0.0)
+    
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=func.now())
+    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=func.now(), onupdate=func.now())

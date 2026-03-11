@@ -1,0 +1,648 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Trading Assistant Dashboard</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <style>
+        :root {
+            --bg-color: #0f172a;
+            --surface-color: rgba(30, 41, 59, 0.7);
+            --border-color: rgba(255, 255, 255, 0.1);
+            --text-primary: #f8fafc;
+            --text-secondary: #94a3b8;
+            --accent-glow: rgba(56, 189, 248, 0.15);
+            --accent: #38bdf8;
+
+            --long-color: #10b981;
+            --long-glow: rgba(16, 185, 129, 0.2);
+            --short-color: #ef4444;
+            --short-glow: rgba(239, 68, 68, 0.2);
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Inter', sans-serif;
+        }
+
+        body {
+            background-color: var(--bg-color);
+            color: var(--text-primary);
+            min-height: 100vh;
+            background-image:
+                radial-gradient(circle at 15% 50%, rgba(56, 189, 248, 0.04), transparent 25%),
+                radial-gradient(circle at 85% 30%, rgba(139, 92, 246, 0.04), transparent 25%);
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 2rem;
+        }
+
+        header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 3rem;
+            padding-bottom: 1rem;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .title-group {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+
+        .title-icon {
+            color: var(--accent);
+            filter: drop-shadow(0 0 8px var(--accent-glow));
+        }
+
+        h1 {
+            font-weight: 600;
+            font-size: 1.5rem;
+            letter-spacing: -0.025em;
+        }
+
+        .status-badge {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 0.5rem 1rem;
+            background: rgba(16, 185, 129, 0.1);
+            border: 1px solid var(--long-glow);
+            border-radius: 99px;
+            font-size: 0.875rem;
+            font-weight: 500;
+            color: var(--long-color);
+        }
+
+        .pulse {
+            width: 8px;
+            height: 8px;
+            background: var(--long-color);
+            border-radius: 50%;
+            box-shadow: 0 0 8px var(--long-color);
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0% {
+                transform: scale(0.95);
+                box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.7);
+            }
+
+            70% {
+                transform: scale(1);
+                box-shadow: 0 0 0 6px rgba(16, 185, 129, 0);
+            }
+
+            100% {
+                transform: scale(0.95);
+                box-shadow: 0 0 0 0 rgba(16, 185, 129, 0);
+            }
+        }
+
+        /* Stats Grid */
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 1.5rem;
+            margin-bottom: 2rem;
+        }
+
+        .stat-card {
+            background: var(--surface-color);
+            backdrop-filter: blur(12px);
+            border: 1px solid var(--border-color);
+            border-radius: 16px;
+            padding: 1.5rem;
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+
+        .stat-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 24px var(--accent-glow);
+            border-color: rgba(255, 255, 255, 0.2);
+        }
+
+        .stat-title {
+            color: var(--text-secondary);
+            font-size: 0.875rem;
+            margin-bottom: 0.5rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .stat-value {
+            font-size: 2rem;
+            font-weight: 600;
+        }
+
+        /* Split Layout */
+        .dashboard-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 2rem;
+        }
+
+        @media (max-width: 900px) {
+            .dashboard-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        .section-title {
+            margin-bottom: 1.5rem;
+            font-weight: 500;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .signals-container {
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+        }
+
+        .signal-card {
+            background: var(--surface-color);
+            backdrop-filter: blur(12px);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            padding: 1.25rem;
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+            transition: all 0.2s ease;
+        }
+
+        .signal-card:hover {
+            background: rgba(30, 41, 59, 0.9);
+            border-color: rgba(255, 255, 255, 0.15);
+        }
+
+        .signal-direction {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            width: 64px;
+            height: 64px;
+            border-radius: 12px;
+            font-weight: 600;
+            font-size: 0.875rem;
+        }
+
+        .dir-long {
+            background: var(--long-glow);
+            color: var(--long-color);
+            border: 1px solid rgba(16, 185, 129, 0.3);
+        }
+
+        .dir-short {
+            background: var(--short-glow);
+            color: var(--short-color);
+            border: 1px solid rgba(239, 68, 68, 0.3);
+        }
+
+        .signal-header {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+
+        .symbol {
+            font-size: 1.25rem;
+            font-weight: 600;
+            letter-spacing: 1px;
+        }
+
+        .asset-type {
+            font-size: 0.75rem;
+            padding: 2px 8px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 4px;
+            color: var(--text-secondary);
+            text-transform: uppercase;
+        }
+
+        .signal-details {
+            display: flex;
+            gap: 1.5rem;
+            font-size: 0.875rem;
+            color: var(--text-secondary);
+        }
+
+        .detail span {
+            color: var(--text-primary);
+            font-weight: 500;
+            margin-left: 0.25rem;
+        }
+
+        .signal-meta {
+            text-align: right;
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+        }
+
+        .confidence {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            font-size: 0.875rem;
+            color: var(--accent);
+        }
+
+        .time {
+            font-size: 0.75rem;
+            color: var(--text-secondary);
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 4rem 2rem;
+            color: var(--text-secondary);
+            background: var(--surface-color);
+            border: 1px dashed var(--border-color);
+            border-radius: 12px;
+        }
+
+        .empty-state i {
+            width: 48px;
+            height: 48px;
+            margin-bottom: 1rem;
+            opacity: 0.5;
+        }
+
+        .raw-text {
+            margin-top: 0.25rem;
+            font-size: 0.8rem;
+            color: #64748b;
+            font-family: monospace;
+            background: rgba(0, 0, 0, 0.2);
+            padding: 0.5rem;
+            border-radius: 6px;
+            word-break: break-all;
+        }
+
+        /* Action Buttons */
+        .action-container {
+            display: flex;
+            gap: 0.5rem;
+            border-top: 1px solid var(--border-color);
+            padding-top: 1rem;
+        }
+
+        .btn {
+            flex: 1;
+            padding: 0.6rem;
+            border-radius: 8px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 0.5rem;
+            border: none;
+        }
+
+        .btn-approve {
+            background: rgba(16, 185, 129, 0.15);
+            color: var(--long-color);
+            border: 1px solid var(--long-glow);
+        }
+
+        .btn-approve:hover {
+            background: rgba(16, 185, 129, 0.3);
+            box-shadow: 0 0 15px var(--long-glow);
+            transform: translateY(-2px);
+        }
+
+        .btn-reject {
+            background: rgba(239, 68, 68, 0.15);
+            color: var(--short-color);
+            border: 1px solid var(--short-glow);
+        }
+
+        .btn-reject:hover {
+            background: rgba(239, 68, 68, 0.3);
+            box-shadow: 0 0 15px var(--short-glow);
+            transform: translateY(-2px);
+        }
+
+        .position-card {
+            background: linear-gradient(145deg, var(--surface-color), rgba(15, 23, 42, 0.8));
+            border: 1px solid rgba(56, 189, 248, 0.2);
+            border-left: 4px solid var(--accent);
+            border-radius: 12px;
+            padding: 1.5rem;
+            position: relative;
+            overflow: hidden;
+            transition: all 0.2s ease;
+        }
+
+        .position-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 24px var(--accent-glow);
+        }
+
+        .position-card::after {
+            content: '';
+            position: absolute;
+            top: 0;
+            right: 0;
+            width: 150px;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, var(--accent-glow));
+            opacity: 0.5;
+            pointer-events: none;
+        }
+
+        .pos-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1rem;
+        }
+
+        .pos-val {
+            font-size: 1.5rem;
+            font-weight: 700;
+        }
+
+        .pl-positive {
+            color: var(--long-color);
+        }
+
+        .pl-negative {
+            color: var(--short-color);
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <header>
+            <div class="title-group">
+                <i data-lucide="radar" class="title-icon" style="width:32px; height:32px;"></i>
+                <h1>Antigravity Trading Hub</h1>
+            </div>
+            <div class="status-badge" id="bot-status">
+                <div class="pulse"></div>
+                Initializing...
+            </div>
+        </header>
+
+        <div class="stats-grid">
+            <div class="stat-card">
+                <div class="stat-title"><i data-lucide="message-square"></i> Messages Processed</div>
+                <div class="stat-value" id="val-msgs">0</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-title"><i data-lucide="target"></i> Signals Detected</div>
+                <div class="stat-value" id="val-signals">0</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-title"><i data-lucide="briefcase"></i> Open Positions</div>
+                <div class="stat-value" id="val-positions" style="color: var(--accent);">0</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-title"><i data-lucide="alert-triangle"></i> Errors</div>
+                <div class="stat-value" id="val-errors" style="color: var(--text-primary);">0</div>
+            </div>
+        </div>
+
+        <div class="dashboard-grid">
+            <!-- Left Pane: Signal Feed -->
+            <div class="pane">
+                <h2 class="section-title"><i data-lucide="activity"></i> Signal Offers (Waiting Approval)</h2>
+                <div class="signals-container" id="signals-list">
+                    <div class="empty-state">
+                        <i data-lucide="inbox"></i>
+                        <p>Waiting for signals... Ensure the bot is running.</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Right Pane: Active Positions -->
+            <div class="pane">
+                <h2 class="section-title"><i data-lucide="briefcase"></i> Active Alpaca Positions</h2>
+                <div class="signals-container" id="positions-list">
+                    <div class="empty-state">
+                        <i data-lucide="shield"></i>
+                        <p>No active positions found.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        lucide.createIcons();
+
+        function formatTime(isoString) {
+            const date = new Date(isoString);
+            return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) + ' · ' + date.toLocaleDateString();
+        }
+
+        async function handleAction(signalId, action) {
+            try {
+                const endpoint = action === 'approve' ? '/api/approve_trade' : '/api/reject_trade';
+                const res = await fetch(endpoint, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ signal_id: signalId })
+                });
+                const data = await res.json();
+                if (data.success) {
+                    fetchDashboardData(); // instant refresh
+                } else {
+                    alert("Error: " + data.error);
+                }
+            } catch (e) {
+                console.error(e);
+                alert("Failed to communicate with execution engine.");
+            }
+        }
+
+        async function fetchDashboardData() {
+            try {
+                // Fetch stats
+                const statsRes = await fetch('/api/stats');
+                const stats = await statsRes.json();
+
+                document.getElementById('val-msgs').textContent = stats.messages_seen;
+                document.getElementById('val-signals').textContent = stats.signals_detected;
+
+                const errorsEl = document.getElementById('val-errors');
+                errorsEl.textContent = stats.errors;
+                if (stats.errors > 0) errorsEl.style.color = 'var(--short-color)';
+
+                const statusEl = document.getElementById('bot-status');
+                if (stats.monitoring) {
+                    statusEl.innerHTML = '<div class="pulse"></div> Live Trading Enabled';
+                    statusEl.style.color = 'var(--long-color)';
+                    statusEl.style.borderColor = 'var(--long-glow)';
+                }
+
+                // Fetch positions
+                const posRes = await fetch('/api/positions');
+                const positions = await posRes.json();
+                document.getElementById('val-positions').textContent = positions.length;
+
+                const posListEl = document.getElementById('positions-list');
+                if (positions.length === 0) {
+                    posListEl.innerHTML = `
+                        <div class="empty-state">
+                            <i data-lucide="shield"></i>
+                            <p>No active positions found.</p>
+                        </div>
+                    `;
+                    lucide.createIcons();
+                } else {
+                    posListEl.innerHTML = '';
+                    positions.forEach(p => {
+                        const plClass = p.unrealized_pl >= 0 ? 'pl-positive' : 'pl-negative';
+                        const card = document.createElement('div');
+                        card.className = 'position-card';
+                        card.innerHTML = `
+                            <div class="pos-header">
+                                <div>
+                                    <span class="symbol" style="font-size:1.5rem;">${p.symbol}</span>
+                                    <span class="asset-type" style="margin-left:8px; border-color:var(--border-color);">${p.broker.toUpperCase().replace('_', ' ')}</span>
+                                </div>
+                                <div class="pos-val ${plClass}">
+                                    ${p.unrealized_pl >= 0 ? '+' : ''}$${p.unrealized_pl.toFixed(2)}
+                                </div>
+                            </div>
+                            <div class="signal-details" style="justify-content:flex-start; gap:2rem;">
+                                <div>Qty: <span style="color:var(--text-primary)">${p.quantity}</span></div>
+                                <div>Entry Price: <span style="color:var(--text-primary)">$${p.average_entry_price.toFixed(2)}</span></div>
+                                <div>Current Price: <span style="color:var(--text-primary)">$${p.current_price.toFixed(2)}</span></div>
+                            </div>
+                        `;
+                        posListEl.appendChild(card);
+                    });
+                }
+
+                // Fetch signals
+                const sigRes = await fetch('/api/signals');
+                const signals = await sigRes.json();
+
+                const listEl = document.getElementById('signals-list');
+
+                if (signals.length === 0) {
+                    listEl.innerHTML = `
+                        <div class="empty-state">
+                            <i data-lucide="inbox"></i>
+                            <p>No signals stored yet. Listening for signals...</p>
+                        </div>
+                    `;
+                    lucide.createIcons();
+                    return;
+                }
+
+                listEl.innerHTML = '';
+
+                signals.forEach(sig => {
+                    const isLong = sig.direction.toLowerCase() === 'long';
+                    const dirClass = isLong ? 'dir-long' : 'dir-short';
+                    const dirIcon = isLong ? 'trending-up' : 'trending-down';
+
+                    let actionButtons = '';
+                    if (sig.actionable && !sig.duplicate) {
+                        actionButtons = `
+                            <div class="action-container">
+                                <button class="btn btn-approve" onclick="handleAction('${sig.id}', 'approve')">
+                                    <i data-lucide="check-circle"></i> Approve Offer
+                                </button>
+                                <button class="btn btn-reject" onclick="handleAction('${sig.id}', 'reject')">
+                                    <i data-lucide="x-circle"></i> Reject
+                                </button>
+                            </div>
+                        `;
+                    }
+
+                    const card = document.createElement('div');
+                    card.className = 'signal-card';
+                    card.style.opacity = sig.actionable ? '1' : '0.5';
+                    card.innerHTML = `
+                        <div style="display:grid; grid-template-columns:auto 1fr auto; gap:1.5rem; align-items:center;">
+                            <div class="signal-direction ${dirClass}">
+                                <i data-lucide="${dirIcon}"></i>
+                                <span style="margin-top:4px;">${sig.direction.toUpperCase()}</span>
+                                <span style="font-size:0.65rem; margin-top:2px; opacity:0.8;">${sig.leverage ? sig.leverage + 'x' : '1x'}</span>
+                            </div>
+                            <div style="display:flex; flex-direction:column; gap:0.5rem;">
+                                <div class="signal-header">
+                                    <span class="symbol">${sig.symbol}</span>
+                                    <span class="asset-type">${sig.asset_type}</span>
+                                    <span class="asset-type" style="background:rgba(56,189,248,0.1); color:var(--accent); border:1px solid rgba(56,189,248,0.2);">${sig.source.toUpperCase()}</span>
+                                </div>
+                                <div class="signal-details">
+                                    <div class="detail">Entry: <span>${sig.entry_price ? '$' + sig.entry_price.toFixed(2) : 'N/A'}</span></div>
+                                    <div class="detail">Target: <span>${sig.take_profit_1 ? '$' + sig.take_profit_1.toFixed(2) : 'N/A'}</span></div>
+                                    <div class="detail">Stop: <span style="color:var(--short-color)">${sig.stop_loss ? '$' + sig.stop_loss.toFixed(2) : 'N/A'}</span></div>
+                                </div>
+                                <div class="raw-text">${sig.raw_text}</div>
+                                ${sig.analysis_reasoning ? `
+                                <div style="margin-top: 10px; padding: 12px; background: rgba(56, 189, 248, 0.05); border-left: 3px solid var(--accent); border-radius: 6px;">
+                                    <div style="font-size: 0.75rem; color: var(--accent); font-weight: 600; margin-bottom: 6px; display: flex; align-items: center; gap: 6px;">
+                                        <i data-lucide="bot" style="width:14px; height:14px;"></i> AI Market Analysis
+                                        <span style="margin-left:auto; color:var(--text-secondary); font-weight: 500;"><i data-lucide="clock" style="width:12px; height:12px; margin-right:2px; vertical-align:sub;"></i> Timeline: ${sig.trade_timeline || 'Unknown'}</span>
+                                    </div>
+                                    <div style="font-size: 0.85rem; color: var(--text-primary); line-height: 1.5;">
+                                        ${sig.analysis_reasoning}
+                                    </div>
+                                </div>
+                                ` : ''}
+                            </div>
+                            <div class="signal-meta">
+                                <div style="font-size:0.75rem; color:${sig.actionable && !sig.duplicate ? 'var(--long-color)' : 'var(--short-color)'}; font-weight:600; display:flex; align-items:center; gap:4px; justify-content:flex-end; margin-bottom:4px;">
+                                    <i data-lucide="${sig.duplicate ? 'copy' : (sig.actionable ? 'zap' : 'shield-alert')}" style="width:14px; height:14px;"></i>
+                                    ${sig.duplicate ? 'DUPLICATE' : (sig.actionable ? 'EXECUTION READY' : 'REJECTED / BLOCKED')}
+                                </div>
+                                <div class="confidence" title="AI Market Confidence">
+                                    <i data-lucide="brain-circuit" style="width:14px; height:14px;"></i>
+                                    ${(sig.confidence * 100).toFixed(0)}% AI Score
+                                </div>
+                                <div class="confidence" title="Data Completeness" style="color:var(--text-primary); opacity:0.8; font-size:0.75rem;">
+                                    <i data-lucide="pie-chart" style="width:14px; height:14px;"></i>
+                                    ${sig.completeness}% Complete
+                                </div>
+                                <div class="time" style="margin-top:4px;">${formatTime(sig.timestamp)}</div>
+                            </div>
+                        </div>
+                        ${actionButtons}
+                    `;
+                    listEl.appendChild(card);
+                });
+
+                lucide.createIcons();
+
+            } catch (err) {
+                console.error("Failed to fetch dashboard data:", err);
+            }
+        }
+
+        // Fetch immediately and poll every 5 seconds
+        fetchDashboardData();
+        setInterval(fetchDashboardData, 5000);
+    </script>
+</body>
+
+</html>

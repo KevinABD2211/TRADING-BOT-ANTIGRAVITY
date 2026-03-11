@@ -54,6 +54,7 @@ from app.services.discord_ingestor.message_store import MessageStore
 from app.services.signal_parser.regex_parser import RegexParser
 from app.services.signal_parser.llm_parser import LLMParser
 from app.services.signal_parser.normalizer import SignalNormalizer, NormalizedSignal
+from app.services.analyzer import AnalyzerService
 
 logger = logging.getLogger(__name__)
 settings = get_settings()
@@ -145,16 +146,40 @@ class ParserRouter:
 
             # Persist
             record = await self._store_signal(db, normalized)
+            
+            # --- Phase 3: AI Market Analysis & Confidence ---
+            analyzer = AnalyzerService()
+            analysis_data = await analyzer.analyze_signal(record)
+            
+            # Update record with AI Insights
+            ai_score = float(analysis_data.get("confidence_score", 50))
+            record.llm_confidence = ai_score / 100.0  # normalize to 0-1
+            record.analysis_reasoning = analysis_data.get("reasoning", "No reasoning provided.")
+            record.trade_timeline = analysis_data.get("trade_timeline", "Unknown")
+            
+            # Auto-calculate take profit for shorts if missing
+            tp_override = analysis_data.get("take_profit")
+            if record.direction == DirectionEnum.short and tp_override is not None:
+                if not record.take_profit_1:
+                    record.take_profit_1 = tp_override
+                    logger.info(f"AI injected Take Profit for short: {tp_override}")
+            
+            # Block signal if AI confidence is too low (< 60%)
+            if ai_score < 60:
+                record.is_actionable = False
+                logger.info(f"Signal actionable status blocked due to low AI confidence: {ai_score}")
+                
             parse_succeeded = True
 
             logger.info(
                 "Signal stored | id=%s | symbol=%s | direction=%s | "
-                "method=%s | completeness=%d%%",
+                "method=%s | completness=%d%% | AI Conf=%d",
                 record.id,
                 record.symbol,
                 record.direction,
                 record.parse_method,
                 record.signal_completeness_pct or 0,
+                ai_score
             )
 
             return record

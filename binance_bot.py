@@ -83,12 +83,12 @@ async def listen_to_binance():
                     symbol = trade.get("s", "UNKNOWN").replace("USDT", "")
                     direction = "SHORT" if is_buyer_maker else "LONG"
                     
-                    author = "WhaleTracker"
-                    # Generate a realistic text signal that the regex parser will catch
+                    author = f"WhaleTracker_{uuid.uuid4().hex[:4]}"
+                    # Generate a realistic text signal that the regex parser will catch easily
                     take_profit = price * 1.05 if direction == "LONG" else price * 0.95
                     stop_loss = price * 0.98 if direction == "LONG" else price * 1.02
                     
-                    content = f"MASSIVE {direction} detected on {symbol}! Entry at {price:.2f}. Targets: {take_profit:.2f}. SL: {stop_loss:.2f}. Leverage 10x"
+                    content = f"${symbol}/USDT {direction} @ {price:.2f} | Target: {take_profit:.2f} | Stop: {stop_loss:.2f} | Lev: 10x"
                     
                     # Offload to parser
                     asyncio.create_task(save_and_parse_message(content, author))
