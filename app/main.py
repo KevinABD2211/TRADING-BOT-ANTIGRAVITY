@@ -9,6 +9,7 @@ from app.database import get_db_context, init_db
 from app.models import ParsedSignal, RawDiscordMessage, TradeExecution, Position
 from app.services.execution_manager import ExecutionManager
 from app.services.scanner import start_scanner_loop
+from app.services.webhook_handler import WebhookService, TradingViewWebhook
 from pydantic import BaseModel
 import os
 import asyncio
@@ -17,6 +18,7 @@ import logging
 logger = logging.getLogger(__name__)
 
 execution_manager = ExecutionManager()
+webhook_service = WebhookService()
 
 class SignalActionRequest(BaseModel):
     signal_id: str
@@ -110,6 +112,14 @@ async def reject_trade(request: SignalActionRequest):
     async with get_db_context() as db:
         res = await execution_manager.reject_signal(db, request.signal_id)
         return res
+
+@app.post("/api/webhooks/tradingview")
+async def receive_tradingview_webhook(payload: TradingViewWebhook):
+    """
+    Receives live market alerts from TradingView Webhooks, bypassing 
+    Vercel's background restrictions by acting on immediate Push data.
+    """
+    return await webhook_service.process_tradingview_alert(payload)
 
 @app.get("/api/positions")
 async def get_positions():
