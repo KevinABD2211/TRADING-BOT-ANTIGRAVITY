@@ -120,10 +120,16 @@ async def init_db() -> None:
     """
     Called on application startup.
     Verifies database connectivity.
-    Does NOT run migrations — use Alembic for schema management.
+    On Vercel, dynamically creates tables in the /tmp/ sqlite database.
     """
     try:
-        async with engine.connect() as conn:
+        async with engine.begin() as conn:
+            import os
+            if os.environ.get("VERCEL"):
+                # Import models here to register them with Base.metadata before creation
+                import app.models
+                await conn.run_sync(Base.metadata.create_all)
+            
             from sqlalchemy import text
             await conn.execute(text("SELECT 1"))
         logger.info("Database connection verified successfully")
